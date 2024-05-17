@@ -1,0 +1,31 @@
+## compilation
+# files in ./src or $src in .conf
+# are compiled into functions based on their file names
+# ie ./shcat -> shcat() { ...
+##
+## libraries
+# files in ./lib or $lib in .conf
+# are compiled first into functions as above
+### shell doesn't require functions to be placed in a order
+### but this is for future proofing mostly
+##
+## storage
+# libraries should NEVER be pulled from a local source
+# either being a form of git submod or unpacked release
+# libraries should be well documented on where they originated from
+# to prevent searching
+### additionally functions are not pulled from the env
+### at no time should a folder and file have the same name !!
+##
+## switches
+# all functions can be disabled from compilation
+# with a simple `disable="<filename>"` argument
+# there is no recursion/delimiter handling so arguments should be given once per function
+# folders of functions and/or libraries can also be disabled in this way
+# ie disable="extended" disabled="additions"
+##
+## config
+# ./.conf or conf="<filename>" can be used to provide configuration
+# options include:
+## $src for src folder
+## $lib for lib folder

@@ -1,0 +1,22 @@
+---
+shbindgen
+-- function bindings generator for sh
+---
+
+---
+design/features
+-- take select (folders of) files and compile them into functions
+---- each file produces its own function
+  >> standard storage in `./src`
+  >> with outside libraries in `./lib`
+  >>>> files should not contain any functions
+  >>>> `exit` replaced with `return`
+  ---
+  >>>> configurable
+  >>>> replacements option
+  >>>>>> only compile function if `$replacement` is not found
+  >>>>>> or does not match checks
+  >>>> disable option
+  >>>> internal function handling
+  >>>> dependency system
+---
