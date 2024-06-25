@@ -19,4 +19,5 @@ design/features
   >>>> disable option
   >>>> internal function handling
   >>>> dependency system
+  >>>> builder for standalone version of libraries
 ---

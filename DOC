@@ -1,3 +1,9 @@
+## stand alone usage
+# a script for compiling scripts into standalone tools
+# is present in ./standalone.sh
+# this simply calls ./bindgen.sh
+# and then adds the data within $standalone
+# at the end of the output
 ## compilation
 # files in ./src or $src in .conf
 # are compiled into functions based on their file names
