@@ -2,7 +2,10 @@
 nl="
 "
 space=" "
-[ $ZSH_VERSION ] && setopt sh_word_split
+[ $ZSH_VERSION ] && {
+  setopt sh_word_split
+  setopt null_glob
+}
 shcat() {
   IFS=""
   while read -r line || [ "$line" ]; do
@@ -10,6 +13,69 @@ shcat() {
   done
 # might be better as for IFS loop
 # but some shells have issues with IFS
+}
+find () {
+  for file in "${1%/}/"*; do
+    # using dotfiles likely causes issues
+    file="${file#./}"; file="${file%/}"; file="${file#/}"; file="${file#${1#./}}"
+    # bunch of fixes for formatting
+    case "${file#/}" in
+      '.'|'..'|'.*'|'*') continue ;;
+    esac
+    # case check for .. & . & * & .*
+    [ -d "${1%/}/${file#/}" ] && {
+      dirname="${1%/}/${file#/}"
+      [ "$2" ] && dirname="${2:+${2}/}${dirname#./}"
+      # all these checks are for freebsd sh
+      # a case check is likely better here tbh
+      printf '%s\n' "${dirname}"
+      [ "$find_orig_path" ] || find_orig_path="$PWD"
+      cd "${dirname#${2}/}"
+      find "./" "${dirname}"
+      cd "$find_orig_path"
+    } || {
+      filename="${1%/}/${file#/}" 
+      [ "$2" ] && filename="${2:+${2}/}${filename#./}"
+      printf '%s\n' "$filename"
+    }
+  done
+}
+comp() {
+  [ -e "$1/" ] || return 1
+  ### find()
+  unset IFS
+  [ "$orig_path" ] || orig_path="$PWD";
+  [ ! "$1" ] && return 1;
+  [ -e "$1" ] || return 1
+  for file in $(find "$1"); do
+    #printf '%s\n' "'$file' | $PWD"
+    [ -d "$file" ] && continue
+    case "$(read line < $file; printf '%s\n' "$line")" in
+      '#!/bin/sh'*|'#!/usr/bin/env bash'*) :;;
+      *) continue;;
+    esac
+    basename="${file##*/}"
+    eval [ \$"${basename#*=}" = "disabled" ] 2>/dev/null && continue
+    #printf '%s\n' "$file"
+    case "$basename" in
+      *"bindgen.sh"*|*"standalone.sh"*) continue;;
+    esac
+    printf '%s\n' "${basename}() {"
+    while IFS= read -r line || [ "$line" ]; do
+      case "$line" in
+        '#!/bin/sh'*|'#!/usr/bin/env bash'*) :;;
+        *"exit"*)
+          line="${line%%exit*}return${line##*exit}"
+          printf '%s\n' "$line"
+          ;;
+        *) printf '%s\n' "$line";;
+      esac
+    done << EOF
+$(shcat < "$file")
+EOF
+    printf '%s\n' "}"
+    cd "$orig_path"
+  done
 }
 while [ "$1" ]; do
   case "$1" in
@@ -53,84 +119,6 @@ done
 }
 [ "$lib" ] || lib="./lib"
 # libraries aren't needed
-find () {
-  for file in "${1%/}/"* "${1%/}/."*; do
-    file="${file#./}"; file="${file%/}"; file="${file#/}"; file="${file#${1#./}}"
-    # bunch of fixes for formatting
-    case "${file#/}" in
-      '.'|'..'|'.*'|'*') continue ;;
-    esac
-    # case check for .. & . & * & .*
-    [ -d "${1%/}/${file#/}" ] && {
-      dirname="${1%/}/${file#/}"
-      [ "$2" ] && dirname="${2:+${2}/}${dirname#./}"
-      # all these checks are for freebsd sh
-      # a case check is likely better here tbh
-      printf '%s\n' "${dirname}"
-      cd "${dirname#${2}/}"
-      find "./" "${dirname}"
-      cd ../
-    } || {
-      filename="${1%/}/${file#/}" 
-      [ "$2" ] && filename="${2:+${2}/}${filename#./}"
-      # basename is ${filename##*/}
-      basename="${filename##*/}"
-      printf '%s\n' "$filename" #printf '%s\n' "${basename}() {"
-    }
-  done
-}
-# this has some weird issues with cd
-# if run where $1 is a dir
-comp() {
-  [ -e "$1/" ] || return 1
-  ### find()
-  [ "$orig_path" ] || orig_path="$PWD";
-  [ ! "$1" ] && return 1;
-  [ -e "$1" ] || return 1
-  for file in "${1%/}/"* "${1%/}/."*; do
-    file="${file#./}"; file="${file%/}"; file="${file#/}"; file="${file#${1#./}}"
-    # bunch of fixes for formatting
-    case "${file#/}" in
-      '.'|'..'|'.*'|'*') continue ;;
-    esac
-    # case check for .. & . & * & .*
-    [ -d "${1%/}/${file#/}" ] && {
-      # all these checks are for freebsd sh
-      # a case check is likely better here tbh
-      pwd="$PWD"; find "${1%/}/${file#/}"; cd "$pwd" 
-    } || { 
-      # file is "${1%/}/${file#/}"
-      filename="${1%/}/${file#/}"
-      # basename is ${filename##*/}
-      basename="${filename##*/}"
-      eval [ \$"${basename#*=}" = "disabled" ] 2>/dev/null && continue
-      printf '%s\n' "${basename}() {"
-      case "$(shcat < $filename)" in
-        *"exit"*)
-          IFS=""
-          while read -r line || [ "$line" ]; do
-            case "$line" in
-              *"exit"*)
-                line="${line%%exit*}return${line##*exit}"
-                printf '%s\n' "$line"
-                ;;
-              *) printf '%s\n' "$line";;
-            esac
-          done << EOF
-$(shcat < "$filename")
-EOF
-        ;;
-        *) shcat < "$filename";;
-      esac
-      printf '%s\n' "}"
-    }
-  done
-  ###
-
-  # basically have to do a find(1) here
-  # technically for looping over find() is slower than
-  ## running with the loop
-}
 # compile data in "$1/" into functions and output
 comp "$lib"
 comp "$src"
