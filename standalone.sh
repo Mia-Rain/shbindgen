@@ -8,7 +8,7 @@ while [ "$1" ]; do
 done
 [ "$conf" -a -e "$conf" ] && {
   . "$conf"
-  type source && source "$conf"
+  type source 1>/dev/null 2>/dev/null && source "$conf"
   # use source if the shell supports it
   # if I'm not wrong source is required for some extensions in some shells 
 }
